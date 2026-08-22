@@ -1,0 +1,17 @@
+# --- Retrieval ---
+rank-bm25==0.2.2
+sentence-transformers==3.0.1
+numpy==1.26.4
+
+# --- LLM client (pick based on which provider you choose) ---
+groq==0.11.0
+# google-generativeai==0.8.0
+
+# --- Config / environment ---
+python-dotenv==1.0.1
+
+# --- CLI ---
+click==8.1.7
+
+# --- Testing ---
+pytest==8.3.2
