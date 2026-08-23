@@ -1,81 +1,52 @@
 [
   {
-    "id": 1,
-    "question": "How many days does a recipient have to report a change of circumstances?",
-    "expected_status": "conflict",
-    "expected_citations": [
-      "4.3.2",
-      "9.1.4"
-    ]
+    "question": "What is the reporting deadline for a change that occurred on 20 February 2026?",
+    "expected_status": "CONFLICT",
+    "description": "Old policy contains conflicting deadlines."
   },
   {
-    "id": 2,
-    "question": "What is the maximum amount of countable resources a household can have?",
-    "expected_status": "answered",
-    "expected_citations": [
-      "2.4.1"
-    ]
+    "question": "What is the reporting deadline for a change that occurred on 10 March 2026?",
+    "expected_status": "ANSWERED",
+    "description": "Amendment aligns both reporting clauses to 14 days."
   },
   {
-    "id": 3,
-    "question": "Can a 17-year-old apply for assistance?",
-    "expected_status": "answered",
-    "expected_citations": [
-      "2.3.1",
-      "2.3.2"
-    ]
+    "question": "What is the reporting deadline?",
+    "expected_status": "DATE_REQUIRED",
+    "description": "The relevant change date is required."
   },
   {
-    "id": 4,
-    "question": "How long can a recipient normally be temporarily absent from Calder County?",
-    "expected_status": "answered",
-    "expected_citations": [
-      "3.2.1"
-    ]
+    "question": "What was the earnings disregard for a determination made on 20 February 2026?",
+    "expected_status": "ANSWERED",
+    "description": "Original $120 rule applies."
   },
   {
-    "id": 5,
-    "question": "What is the income threshold for a household of three people?",
-    "expected_status": "answered",
-    "expected_citations": [
-      "6.6.1"
-    ]
+    "question": "What is the earnings disregard for a determination made on 20 March 2026?",
+    "expected_status": "ANSWERED",
+    "description": "Amended $175 rule applies."
   },
   {
-    "id": 6,
-    "question": "How much employment income is disregarded each month?",
-    "expected_status": "answered",
-    "expected_citations": [
-      "6.4.1",
-      "6.4.2"
-    ]
+    "question": "A determination was made on 10 March 2026 for a change that occurred on 20 February 2026. What reporting period applies?",
+    "expected_status": "CONFLICT",
+    "description": "Reporting uses the change date, not determination date."
   },
   {
-    "id": 7,
-    "question": "Can the Department recover an overpayment caused only by its own error?",
-    "expected_status": "answered",
-    "expected_citations": [
-      "9.1.5"
-    ]
+    "question": "What income threshold applies to a household of three for a determination made on 10 March 2026?",
+    "expected_status": "ANSWERED",
+    "description": "New income threshold applies."
   },
   {
-    "id": 8,
-    "question": "How long does a person have to request a review?",
-    "expected_status": "answered",
-    "expected_citations": [
-      "11.1.2"
-    ]
+    "question": "What sanction percentage applies for a determination made on 10 March 2026?",
+    "expected_status": "ANSWERED",
+    "description": "Amended 15 percent sanction applies."
   },
   {
-    "id": 9,
-    "question": "Does the policy manual cover eligibility for unemployment insurance?",
-    "expected_status": "refused",
-    "expected_citations": []
+    "question": "Can a sanction be imposed for failing to report a change that would have increased the award for a determination made on 10 March 2026?",
+    "expected_status": "ANSWERED",
+    "description": "New clause 10.5.3A applies."
   },
   {
-    "id": 10,
-    "question": "What happens if a recipient moves to another country permanently?",
-    "expected_status": "refused",
-    "expected_citations": []
+    "question": "What is the policy on free school meals?",
+    "expected_status": "REFUSED",
+    "description": "The assistant should refuse if the corpus does not cover the topic."
   }
 ]

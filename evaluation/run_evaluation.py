@@ -1,140 +1,100 @@
 import json
 
-from src.config import (
-    DATA_PATH,
-    EMBEDDING_MODEL,
-    MIN_RETRIEVAL_SCORE,
-    TOP_K
+from src.main import (
+    build_system,
+    process_query,
 )
 
-from src.ingestion.parser import parse_policy
-
-from src.retrieval.bm25_retriever import (
-    BM25Retriever
+from src.utils.session import (
+    SessionMemory,
 )
-
-from src.retrieval.semantic_retriever import (
-    SemanticRetriever
-)
-
-from src.retrieval.hybrid_retriever import (
-    HybridRetriever
-)
-
-from src.validation.answerability import (
-    AnswerabilityChecker
-)
-
-from src.agents.contradiction_agent import (
-    ContradictionAgent
-)
-
-
-def load_test_cases():
-    with open(
-        "evaluation/test_cases.json",
-        "r",
-        encoding="utf-8"
-    ) as file:
-        return json.load(file)
-
-
-def get_status(
-    question,
-    retriever,
-    checker,
-    contradiction_agent
-):
-    results = retriever.search(
-        question,
-        TOP_K
-    )
-
-    if not checker.can_answer(results):
-        return "refused"
-
-    if contradiction_agent.find_known_conflict(
-        results
-    ):
-        return "conflict"
-
-    return "answered"
 
 
 def main():
-    clauses = parse_policy(DATA_PATH)
 
-    bm25 = BM25Retriever(clauses)
+    with open(
+        "evaluation/test_cases.json",
+        encoding="utf-8",
+    ) as file:
 
-    semantic = SemanticRetriever(
-        clauses,
-        EMBEDDING_MODEL
-    )
+        tests = json.load(file)
 
-    retriever = HybridRetriever(
-        bm25,
-        semantic
-    )
-
-    checker = AnswerabilityChecker(
-        MIN_RETRIEVAL_SCORE
-    )
-
-    contradiction_agent = (
-        ContradictionAgent()
-    )
-
-    test_cases = load_test_cases()
+    system = build_system()
 
     passed = 0
+    total = len(tests)
 
-    print("\nRunning evaluation...\n")
+    print(
+        "\nEvaluation Results\n"
+    )
 
-    for test in test_cases:
+    for index, test in enumerate(
+        tests,
+        start=1,
+    ):
 
-        actual_status = get_status(
+        memory = SessionMemory()
+
+        result = process_query(
             test["question"],
-            retriever,
-            checker,
-            contradiction_agent
+            system,
+            memory,
+        )
+
+        # ----------------------------------------------------
+        # Normalize enum -> string
+        # ----------------------------------------------------
+
+        actual_status = (
+            result.status.value
+            if hasattr(
+                result.status,
+                "value"
+            )
+            else str(
+                result.status
+            )
         )
 
         expected_status = (
             test["expected_status"]
         )
 
-        success = (
-            actual_status == expected_status
+        passed_test = (
+            actual_status
+            == expected_status
         )
 
-        if success:
+        if passed_test:
             passed += 1
-            result = "PASS"
+            label = "PASS"
         else:
-            result = "FAIL"
+            label = "FAIL"
 
         print(
-            f"Test {test['id']}: {result}"
+            f"{index}. {label}"
         )
 
         print(
-            f"Expected: {expected_status}"
+            f"Question: "
+            f"{test['question']}"
         )
 
         print(
-            f"Actual:   {actual_status}\n"
+            f"Expected: "
+            f"{expected_status}"
         )
 
-    total = len(test_cases)
+        print(
+            f"Actual: "
+            f"{actual_status}"
+        )
 
-    print("-" * 30)
+        print()
 
     print(
-        f"Passed: {passed}/{total}"
-    )
-
-    print(
-        f"Failed: {total - passed}/{total}"
+        f"Final result: "
+        f"{passed}/{total} passed"
     )
 
 
