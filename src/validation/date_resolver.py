@@ -19,6 +19,11 @@ class DateResolver:
             r"July|August|September|October|November|December)"
             r"\s+\d{1,2},?\s+\d{4}\b"
         ),
+        (
+            r"\b\d{1,2}\s+(?:January|February|March|April|May|June|"
+            r"July|August|September|October|November|December)"
+            r"\s+\d{4}\b"
+        ),
     ]
 
     def parse_date(self, value):
@@ -31,6 +36,7 @@ class DateResolver:
             "%m/%d/%Y",
             "%B %d %Y",
             "%B %d, %Y",
+            "%d %B %Y",
         ]
 
         for fmt in formats:
@@ -200,6 +206,10 @@ class DateResolver:
             r"(?:January|February|March|April|May|June|"
             r"July|August|September|October|November|December)"
             r"\s+\d{1,2},?\s+\d{4}"
+            r"|"
+            r"\d{1,2}\s+(?:January|February|March|April|May|June|"
+            r"July|August|September|October|November|December)"
+            r"\s+\d{4}"
             r")",
             text,
             re.IGNORECASE,
@@ -225,6 +235,10 @@ class DateResolver:
             r"(?:January|February|March|April|May|June|"
             r"July|August|September|October|November|December)"
             r"\s+\d{1,2},?\s+\d{4}"
+            r"|"
+            r"\d{1,2}\s+(?:January|February|March|April|May|June|"
+            r"July|August|September|October|November|December)"
+            r"\s+\d{4}"
             r")",
             text,
             re.IGNORECASE,

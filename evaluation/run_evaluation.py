@@ -5,9 +5,7 @@ from src.main import (
     process_query,
 )
 
-from src.utils.session import (
-    SessionMemory,
-)
+from src.utils.session import SessionMemory
 
 
 def main():
@@ -16,7 +14,6 @@ def main():
         "evaluation/test_cases.json",
         encoding="utf-8",
     ) as file:
-
         tests = json.load(file)
 
     system = build_system()
@@ -24,15 +21,14 @@ def main():
     passed = 0
     total = len(tests)
 
-    print(
-        "\nEvaluation Results\n"
-    )
+    print("\nEvaluation Results\n")
 
     for index, test in enumerate(
         tests,
         start=1,
     ):
 
+        # Fresh memory for every independent test
         memory = SessionMemory()
 
         result = process_query(
@@ -41,24 +37,29 @@ def main():
             memory,
         )
 
-        # ----------------------------------------------------
-        # Normalize enum -> string
-        # ----------------------------------------------------
+        # -------------------------------------------------
+        # Normalize actual status
+        # -------------------------------------------------
 
-        actual_status = (
-            result.status.value
-            if hasattr(
-                result.status,
-                "value"
-            )
-            else str(
-                result.status
-            )
-        )
+        actual_status = result.status
 
-        expected_status = (
+        if hasattr(
+            actual_status,
+            "value",
+        ):
+            actual_status = actual_status.value
+
+        actual_status = str(
+            actual_status
+        ).strip().upper()
+
+        # -------------------------------------------------
+        # Normalize expected status
+        # -------------------------------------------------
+
+        expected_status = str(
             test["expected_status"]
-        )
+        ).strip().upper()
 
         passed_test = (
             actual_status
@@ -89,6 +90,20 @@ def main():
             f"Actual: "
             f"{actual_status}"
         )
+
+        # Show useful diagnostic information
+        if not passed_test:
+
+            print(
+                f"Answer: "
+                f"{result.answer}"
+            )
+
+            if result.reason:
+                print(
+                    f"Reason: "
+                    f"{result.reason}"
+                )
 
         print()
 

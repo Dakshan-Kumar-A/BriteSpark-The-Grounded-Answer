@@ -1,96 +1,79 @@
 import re
 
 from src.models.schemas import Status
-from src.config import MIN_EVIDENCE_SCORE
-
-
-STOPWORDS = {
-    "what",
-    "is",
-    "the",
-    "a",
-    "an",
-    "for",
-    "on",
-    "of",
-    "to",
-    "and",
-    "or",
-    "was",
-    "are",
-    "does",
-    "can",
-    "be",
-    "made",
-    "that",
-    "would",
-    "have",
-    "with",
-    "how",
-    "do",
-}
+from src.config import MIN_RETRIEVAL_SCORE
 
 
 class Answerability:
 
-    def _tokens(self, text):
+    STOP_WORDS = {
+        "what",
+        "is",
+        "the",
+        "a",
+        "an",
+        "for",
+        "on",
+        "of",
+        "to",
+        "and",
+        "or",
+        "was",
+        "does",
+        "do",
+        "can",
+        "be",
+        "made",
+        "occurred",
+        "applies",
+        "apply",
+        "policy",
+    }
 
+    def _tokens(self, text):
         words = re.findall(
-            r"[a-zA-Z0-9]+",
+            r"[a-z0-9]+",
             text.lower(),
         )
 
         return {
             word
             for word in words
-            if word not in STOPWORDS
+            if word not in self.STOP_WORDS
             and len(word) > 2
         }
 
-    def _is_relevant(
+    def _has_lexical_support(
         self,
         query,
         evidence,
     ):
-
-        query_tokens = self._tokens(
-            query
-        )
+        query_tokens = self._tokens(query)
 
         if not query_tokens:
-            return False
+            return True
 
-        best_overlap = 0
-
-        for item in evidence:
-
-            clause = getattr(
-                item,
-                "clause",
-                item,
+        evidence_text = " ".join(
+            (
+                item.clause.text
+                if hasattr(item, "clause")
+                else item.text
             )
+            for item in evidence
+        )
 
-            text = getattr(
-                clause,
-                "text",
-                "",
-            )
+        evidence_tokens = self._tokens(
+            evidence_text
+        )
 
-            clause_tokens = self._tokens(
-                text
-            )
+        overlap = (
+            query_tokens
+            & evidence_tokens
+        )
 
-            overlap = len(
-                query_tokens
-                & clause_tokens
-            )
-
-            best_overlap = max(
-                best_overlap,
-                overlap,
-            )
-
-        return best_overlap >= 2
+        # At least one meaningful query concept
+        # should appear in the evidence.
+        return bool(overlap)
 
     def check(
         self,
@@ -99,25 +82,32 @@ class Answerability:
         conflict,
         query=None,
     ):
+        # --------------------------------------------------
+        # Missing date
+        # --------------------------------------------------
 
-        # Date is required but absent.
-        if date_info.get(
-            "needed"
-        ):
+        if date_info.get("needed"):
             return Status.DATE_REQUIRED
 
-        # Explicit contradiction.
-        if conflict.get(
-            "conflict"
-        ):
+        # --------------------------------------------------
+        # Contradiction
+        # --------------------------------------------------
+
+        if conflict.get("conflict"):
             return Status.CONFLICT
 
-        # Nothing retrieved.
+        # --------------------------------------------------
+        # No evidence
+        # --------------------------------------------------
+
         if not evidence:
             return Status.REFUSED
 
-        # Retrieval scores.
-        scores = []
+        # --------------------------------------------------
+        # Score filtering
+        # --------------------------------------------------
+
+        relevant = []
 
         for item in evidence:
 
@@ -127,31 +117,21 @@ class Answerability:
                 0.0,
             )
 
-            try:
+            if score >= MIN_RETRIEVAL_SCORE:
+                relevant.append(item)
 
-                scores.append(
-                    float(score)
-                )
-
-            except (
-                TypeError,
-                ValueError,
-            ):
-
-                continue
-
-        if not scores:
+        if not relevant:
             return Status.REFUSED
 
-        if max(scores) < MIN_EVIDENCE_SCORE:
-            return Status.REFUSED
+        # --------------------------------------------------
+        # Lexical topic validation
+        # --------------------------------------------------
 
-        # Query/evidence lexical sanity check.
-        if query:
+        if query is not None:
 
-            if not self._is_relevant(
+            if not self._has_lexical_support(
                 query,
-                evidence,
+                relevant,
             ):
                 return Status.REFUSED
 

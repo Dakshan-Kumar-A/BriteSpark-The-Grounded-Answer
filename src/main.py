@@ -124,17 +124,14 @@ def build_system():
     )
 
     return {
-
         "retrieval": RetrievalAgent(
             hybrid
         ),
 
         "evidence": EvidenceAgent(),
 
-        "contradiction": (
-            ContradictionAgent(
-                clauses
-            )
+        "contradiction": ContradictionAgent(
+            clauses
         ),
 
         "date": DateResolver(),
@@ -145,68 +142,64 @@ def build_system():
             LLMClient()
         ),
     }
+    
 
 def process_query(
     query,
     system,
-    memory=None,
+    memory,
 ):
+    full_query = memory.combine(query)
 
-    full_query = query.strip()
-
-    # ----------------------------------------------------
-    # Resolve dates
-    # ----------------------------------------------------
+    # ---------------------------------------------
+    # Resolve dates before retrieval/decision logic
+    # ---------------------------------------------
 
     date_info = system["date"].resolve(
         full_query
     )
 
-    # ----------------------------------------------------
-    # Retrieve relevant policy clauses
-    # ----------------------------------------------------
+    # ---------------------------------------------
+    # Retrieve relevant clauses
+    # ---------------------------------------------
 
     clauses = system["retrieval"].run(
         full_query
     )
 
-    # ----------------------------------------------------
-    # Extract evidence
-    # ----------------------------------------------------
+    # ---------------------------------------------
+    # Select evidence
+    # ---------------------------------------------
 
     evidence = system["evidence"].run(
         clauses,
         date_info,
     )
 
-    # ----------------------------------------------------
+    # ---------------------------------------------
     # Detect contradictions
-    # ----------------------------------------------------
+    # ---------------------------------------------
 
-    conflict = (
-        system["contradiction"].run(
-            full_query,
-            evidence,
-            date_info,
-        )
+    conflict = system["contradiction"].run(
+        full_query,
+        evidence,
+        date_info,
     )
 
-    # ----------------------------------------------------
-    # Determine answerability
-    # ----------------------------------------------------
+    # ---------------------------------------------
+    # Determine answer status
+    # ---------------------------------------------
 
-    status = (
-        system["answerability"].check(
-            evidence,
-            date_info,
-            conflict,
-            full_query,
-        )
+    status = system["answerability"].check(
+        evidence,
+        date_info,
+        conflict,
+        full_query,
     )
 
-    # ----------------------------------------------------
+    # ---------------------------------------------
     # Generate final answer
-    # ----------------------------------------------------
+    # ---------------------------------------------
 
     result = system["answer"].run(
         full_query,

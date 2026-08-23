@@ -1,7 +1,7 @@
 class ContradictionAgent:
 
-    def __init__(self, clauses=None):
-        self.clauses = clauses or []
+    def __init__(self, clauses):
+        self.clauses = clauses
 
     def run(
         self,
@@ -9,80 +9,91 @@ class ContradictionAgent:
         clauses,
         date_info,
     ):
+        """
+        Detect policy contradictions.
+
+        Reporting rules:
+            - Use the change date.
+            - Before 1 March 2026, the original policy applies.
+            - The original policy contains conflicting reporting
+              provisions in §4.3.2 and §9.1.4.
+
+        The contradiction check uses the COMPLETE CORPUS rather
+        than only retrieved evidence. This prevents retrieval
+        ranking from hiding one side of a known contradiction.
+        """
+
+        # --------------------------------------------------
+        # If no date was supplied, the answerability layer
+        # will handle DATE_REQUIRED.
+        # --------------------------------------------------
+
+        if date_info.get("needed"):
+            return {
+                "conflict": False,
+                "clauses": [],
+            }
+
+        # --------------------------------------------------
+        # Determine whether the question concerns reporting.
+        # --------------------------------------------------
 
         query_text = query.lower()
 
-        # ----------------------------------------------------
-        # Determine whether this is a reporting question
-        # ----------------------------------------------------
+        reporting_keywords = [
+            "reporting deadline",
+            "reporting period",
+            "report a change",
+            "reporting",
+            "report",
+            "change of circumstances",
+            "failing to report",
+            "failure to report",
+            "notify",
+            "notification",
+        ]
 
-        reporting = any(
-            word in query_text
-            for word in [
-                "report",
-                "reporting",
-                "deadline",
-                "notify",
-                "change of circumstances",
-                "reporting period",
-            ]
+        is_reporting_question = any(
+            keyword in query_text
+            for keyword in reporting_keywords
         )
 
-        if not reporting:
+        if not is_reporting_question:
             return {
                 "conflict": False,
                 "clauses": [],
             }
 
-        # ----------------------------------------------------
-        # Reporting applicability is based on CHANGE DATE
-        # ----------------------------------------------------
+        # --------------------------------------------------
+        # Amended policy.
+        #
+        # The amendment resolves the old conflict.
+        # --------------------------------------------------
 
-        version = date_info.get(
-            "change_version"
-        )
-
-        if version is None:
-            version = date_info.get(
-                "version"
-            )
-
-        # Amended policy resolves the old conflict.
-        if version == "amended":
+        if date_info.get("version") == "amended":
             return {
                 "conflict": False,
                 "clauses": [],
             }
 
-        # ----------------------------------------------------
-        # Search COMPLETE corpus
-        # ----------------------------------------------------
-
-        source_clauses = (
-            self.clauses
-            if self.clauses
-            else clauses
-        )
+        # --------------------------------------------------
+        # Original policy.
+        #
+        # IMPORTANT:
+        # Search the COMPLETE corpus, not only retrieved
+        # evidence.
+        # --------------------------------------------------
 
         sections = {
             clause.section: clause
-            for clause in source_clauses
+            for clause in self.clauses
         }
 
-        first = sections.get(
-            "4.3.2"
-        )
+        first = sections.get("4.3.2")
+        second = sections.get("9.1.4")
 
-        second = sections.get(
-            "9.1.4"
-        )
-
-        # ----------------------------------------------------
-        # Both original reporting clauses exist
-        # ----------------------------------------------------
-
+        # Both original reporting provisions exist.
         if first and second:
-
             return {
                 "conflict": True,
                 "clauses": [
