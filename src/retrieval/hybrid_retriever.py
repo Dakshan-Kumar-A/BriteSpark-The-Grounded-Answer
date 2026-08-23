@@ -48,12 +48,16 @@ class HybridRetriever:
             top_k
         )
 
+        # Keep absolute semantic similarity.
+        semantic_scores = {
+            item.clause.citation: item.score
+            for item in semantic_results
+        }
+
+        # BM25 is useful for lexical matching, but its raw scale
+        # is not directly comparable to cosine similarity.
         bm25_scores = self.normalize_scores(
             bm25_results
-        )
-
-        semantic_scores = self.normalize_scores(
-            semantic_results
         )
 
         clauses = {}
@@ -64,9 +68,19 @@ class HybridRetriever:
         results = []
 
         for citation, clause in clauses.items():
+            semantic_score = semantic_scores.get(
+                citation,
+                0
+            )
+
+            bm25_score = bm25_scores.get(
+                citation,
+                0
+            )
+
             score = (
-                bm25_scores.get(citation, 0) * 0.5
-                + semantic_scores.get(citation, 0) * 0.5
+                semantic_score * 0.7
+                + bm25_score * 0.3
             )
 
             results.append(

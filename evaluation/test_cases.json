@@ -1,0 +1,81 @@
+[
+  {
+    "id": 1,
+    "question": "How many days does a recipient have to report a change of circumstances?",
+    "expected_status": "conflict",
+    "expected_citations": [
+      "4.3.2",
+      "9.1.4"
+    ]
+  },
+  {
+    "id": 2,
+    "question": "What is the maximum amount of countable resources a household can have?",
+    "expected_status": "answered",
+    "expected_citations": [
+      "2.4.1"
+    ]
+  },
+  {
+    "id": 3,
+    "question": "Can a 17-year-old apply for assistance?",
+    "expected_status": "answered",
+    "expected_citations": [
+      "2.3.1",
+      "2.3.2"
+    ]
+  },
+  {
+    "id": 4,
+    "question": "How long can a recipient normally be temporarily absent from Calder County?",
+    "expected_status": "answered",
+    "expected_citations": [
+      "3.2.1"
+    ]
+  },
+  {
+    "id": 5,
+    "question": "What is the income threshold for a household of three people?",
+    "expected_status": "answered",
+    "expected_citations": [
+      "6.6.1"
+    ]
+  },
+  {
+    "id": 6,
+    "question": "How much employment income is disregarded each month?",
+    "expected_status": "answered",
+    "expected_citations": [
+      "6.4.1",
+      "6.4.2"
+    ]
+  },
+  {
+    "id": 7,
+    "question": "Can the Department recover an overpayment caused only by its own error?",
+    "expected_status": "answered",
+    "expected_citations": [
+      "9.1.5"
+    ]
+  },
+  {
+    "id": 8,
+    "question": "How long does a person have to request a review?",
+    "expected_status": "answered",
+    "expected_citations": [
+      "11.1.2"
+    ]
+  },
+  {
+    "id": 9,
+    "question": "Does the policy manual cover eligibility for unemployment insurance?",
+    "expected_status": "refused",
+    "expected_citations": []
+  },
+  {
+    "id": 10,
+    "question": "What happens if a recipient moves to another country permanently?",
+    "expected_status": "refused",
+    "expected_citations": []
+  }
+]

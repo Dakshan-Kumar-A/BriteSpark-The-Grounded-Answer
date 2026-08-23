@@ -5,6 +5,7 @@ numpy==1.26.4
 
 # --- LLM client (pick based on which provider you choose) ---
 groq==0.11.0
+httpx==0.27.2
 # google-generativeai==0.8.0
 
 # --- Config / environment ---
