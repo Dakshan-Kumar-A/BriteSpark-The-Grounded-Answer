@@ -1,129 +1,216 @@
-import re
+from src.models.schemas import (
+    AnswerResult,
+    Status,
+)
 
-from src.models.schemas import AnswerResult
-from src.llm.prompts import build_prompt
+from src.validation.citation_validator import (
+    make_citation,
+)
 
 
 class AnswerAgent:
 
-    def __init__(
+    def __init__(self, client):
+        self.client = client
+
+    def run(
         self,
-        llm_client,
-        citation_validator,
-        contradiction_agent
+        query,
+        status,
+        evidence,
+        date_info,
+        conflict,
     ):
-        self.llm = llm_client
-        self.citation_validator = citation_validator
-        self.contradiction_agent = contradiction_agent
 
-    def answer(self, question, results):
+        citations = [
+            make_citation(
+                item.clause
+                if hasattr(item, "clause")
+                else item
+            )
+            for item in evidence
+        ]
 
-        if self.contradiction_agent.find_known_conflict(
-            results
-        ):
+        # Remove duplicate citations.
+        citations = list(
+            dict.fromkeys(citations)
+        )
+
+        policy_date = date_info.get(
+            "date"
+        )
+
+        if policy_date:
+
+            policy_date = (
+                policy_date.strftime(
+                    "%Y-%m-%d"
+                )
+            )
+
+        # ----------------------------------------------------
+        # Missing required date
+        # ----------------------------------------------------
+
+        if status == Status.DATE_REQUIRED:
+
             return AnswerResult(
-                answer=self.contradiction_agent.get_conflict_message(),
-                citations=["4.3.2", "9.1.4"],
-                status="conflict"
+                status=status,
+
+                answer=(
+                    "A date is required to determine "
+                    "which version of the policy applies."
+                ),
+
+                reason=(
+                    "The applicable policy may differ "
+                    "before and after 1 March 2026."
+                ),
+
+                citations=[],
+
+                policy_date=None,
+
+                follow_up=None,
             )
 
-        prompt = build_prompt(
-            question,
-            results
+        # ----------------------------------------------------
+        # Contradiction
+        # ----------------------------------------------------
+
+        if status == Status.CONFLICT:
+
+            conflict_citations = []
+
+            for clause in conflict.get(
+                "clauses",
+                [],
+            ):
+
+                conflict_citations.append(
+                    make_citation(
+                        clause
+                    )
+                )
+
+            conflict_citations = list(
+                dict.fromkeys(
+                    conflict_citations
+                )
+            )
+
+            return AnswerResult(
+                status=status,
+
+                answer=(
+                    "The applicable original policy "
+                    "contains conflicting reporting rules, "
+                    "so the reporting deadline cannot be "
+                    "determined unambiguously."
+                ),
+
+                reason=(
+                    "The change occurred before "
+                    "1 March 2026 and both applicable "
+                    "reporting clauses are present in "
+                    "the original policy."
+                ),
+
+                citations=conflict_citations,
+
+                policy_date=policy_date,
+
+                follow_up=None,
+            )
+
+        # ----------------------------------------------------
+        # Refused / unsupported
+        # ----------------------------------------------------
+
+        if status == Status.REFUSED:
+
+            return AnswerResult(
+                status=status,
+
+                answer=(
+                    "The available policy manual does "
+                    "not provide sufficient evidence "
+                    "to answer this question."
+                ),
+
+                reason=(
+                    "The system does not make "
+                    "unsupported assumptions beyond "
+                    "the policy corpus."
+                ),
+
+                citations=[],
+
+                policy_date=policy_date,
+
+                follow_up=None,
+            )
+
+        # ----------------------------------------------------
+        # Build evidence context
+        # ----------------------------------------------------
+
+        context_parts = []
+
+        for item in evidence:
+
+            clause = (
+                item.clause
+                if hasattr(item, "clause")
+                else item
+            )
+
+            context_parts.append(
+                f"[§{clause.section}]\n"
+                f"{clause.text}"
+            )
+
+        context = "\n\n".join(
+            context_parts
         )
 
-        response = self.llm.generate(
+        prompt = f"""
+Answer the user's policy question using ONLY
+the supplied policy evidence.
+
+Rules:
+
+- Do not use outside knowledge.
+- Do not guess.
+- Do not invent missing facts.
+- Do not invent policy sections.
+- Only make claims supported by the evidence.
+- Return ONLY the answer.
+- Do NOT return a status.
+- Do NOT return citations.
+- Do NOT return metadata.
+
+User question:
+{query}
+
+Policy evidence:
+{context}
+
+Give a clear, concise answer.
+"""
+
+        answer = self.client.generate(
             prompt
-        ).strip()
-
-        status = self.detect_status(
-            response
-        )
-
-        response = self.remove_status(
-            response
-        )
-
-        response = self.remove_citation_section(
-            response
-        )
-
-        if not response:
-            response = (
-                "The supplied policy evidence does not "
-                "provide enough information to answer "
-                "this question authoritatively."
-            )
-
-            status = "needs_county_insight"
-
-        citations = self.extract_citations(
-            response
-        )
-
-        valid = self.citation_validator.validate(
-            citations,
-            results
-        )
-
-        valid = list(
-            dict.fromkeys(valid)
         )
 
         return AnswerResult(
-            answer=response,
-            citations=valid,
-            status=status
-        )
+            status=Status.ANSWERED,
 
-    def detect_status(self, text):
+            answer=answer.strip(),
 
-        match = re.search(
-            r"Status:\s*"
-            r"(ANSWERED|PARTIALLY_ANSWERED|"
-            r"NEEDS_COUNTY_INSIGHT|NOT_FOUND|"
-            r"OUT_OF_SCOPE|CONFLICT)",
-            text,
-            re.IGNORECASE
-        )
+            citations=citations,
 
-        if not match:
-            return "answered"
+            policy_date=policy_date,
 
-        return match.group(1).lower()
-
-    def remove_status(self, text):
-
-        return re.sub(
-            r"^\s*Status:\s*"
-            r"(ANSWERED|PARTIALLY_ANSWERED|"
-            r"NEEDS_COUNTY_INSIGHT|NOT_FOUND|"
-            r"OUT_OF_SCOPE|CONFLICT)"
-            r"\s*\n?",
-            "",
-            text,
-            count=1,
-            flags=re.IGNORECASE
-        ).strip()
-
-    def remove_citation_section(self, text):
-
-        text = re.sub(
-            r"\n\s*Citations?\s*:.*$",
-            "",
-            text,
-            flags=re.IGNORECASE | re.DOTALL
-        )
-
-        return text.strip()
-
-    def extract_citations(self, text):
-
-        citations = re.findall(
-            r"§\s*(\d+(?:\.\d+)+)",
-            text
-        )
-
-        return list(
-            dict.fromkeys(citations)
+            follow_up=None,
         )

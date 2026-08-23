@@ -1,15 +1,17 @@
 class EvidenceAgent:
+    def run(self, clauses, date_info):
+        version = date_info.get("version")
 
-    def __init__(self, checker):
-        self.checker = checker
+        if not version:
+            return clauses
 
-    def evaluate(self, results):
-        can_answer = self.checker.can_answer(
-            results
-        )
+        evidence = []
 
-        reason = self.checker.get_reason(
-            results
-        )
+        for clause in clauses:
+            if version == "original":
+                evidence.append(clause)
 
-        return can_answer, reason
+            elif version == "amended":
+                evidence.append(clause)
+
+        return evidence

@@ -1,5 +1,4 @@
 from rank_bm25 import BM25Okapi
-
 from src.models.schemas import RetrievedClause
 
 
@@ -23,16 +22,15 @@ class BM25Retriever:
 
         scores = self.bm25.get_scores(tokens)
 
-        results = []
-
-        for index, score in enumerate(scores):
-            results.append(
-                RetrievedClause(
-                    clause=self.clauses[index],
-                    score=float(score),
-                    source="bm25"
-                )
-            )
+        results = [
+        RetrievedClause(
+            clause=self.clauses[index],
+            score=float(score),
+            source="bm25"
+        )
+        for index, score in enumerate(scores)
+        if score > 0
+        ]
 
         results.sort(
             key=lambda item: item.score,

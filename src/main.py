@@ -1,35 +1,112 @@
-import click
-
 from src.config import (
-    DATA_PATH,
+    POLICY_PATH,
+    AMENDMENT_PATH,
+    TOP_K,
     EMBEDDING_MODEL,
-    MIN_RETRIEVAL_SCORE,
-    TOP_K
 )
 
-from src.ingestion.parser import parse_policy
+from src.ingestion.parser import load_corpus
 
-from src.retrieval.bm25_retriever import BM25Retriever
-from src.retrieval.semantic_retriever import SemanticRetriever
-from src.retrieval.hybrid_retriever import HybridRetriever
+from src.retrieval.bm25_retriever import (
+    BM25Retriever,
+)
 
-from src.validation.answerability import AnswerabilityChecker
-from src.validation.citation_validator import CitationValidator
+from src.retrieval.semantic_retriever import (
+    SemanticRetriever,
+)
+
+from src.retrieval.hybrid_retriever import (
+    HybridRetriever,
+)
+
+from src.agents.retrieval_agent import (
+    RetrievalAgent,
+)
+
+from src.agents.evidence_agent import (
+    EvidenceAgent,
+)
+
+from src.agents.contradiction_agent import (
+    ContradictionAgent,
+)
+
+from src.agents.answer_agent import (
+    AnswerAgent,
+)
+
+from src.validation.date_resolver import (
+    DateResolver,
+)
+
+from src.validation.answerability import (
+    Answerability,
+)
 
 from src.llm.client import LLMClient
 
-from src.agents.retrieval_agent import RetrievalAgent
-from src.agents.evidence_agent import EvidenceAgent
-from src.agents.contradiction_agent import ContradictionAgent
-from src.agents.answer_agent import AnswerAgent
+
+def print_result(result):
+
+    print()
+
+    print(
+        f"Status: {result.status}"
+    )
+
+    print()
+
+    print(
+        "Answer:"
+    )
+
+    print(
+        result.answer
+    )
+
+    if result.reason:
+
+        print()
+
+        print(
+            "Reason:"
+        )
+
+        print(
+            result.reason
+        )
+
+    if result.policy_date:
+
+        print()
+
+        print(
+            "Policy date: "
+            + result.policy_date
+        )
+
+    if result.citations:
+
+        print()
+
+        print(
+            "Citations:"
+        )
+
+        for citation in result.citations:
+
+            print(
+                f"- {citation}"
+            )
+
+    print()
 
 
 def build_system():
 
-    print("Loading policy manual...")
-
-    clauses = parse_policy(
-        DATA_PATH
+    clauses = load_corpus(
+        POLICY_PATH,
+        AMENDMENT_PATH,
     )
 
     bm25 = BM25Retriever(
@@ -38,217 +115,138 @@ def build_system():
 
     semantic = SemanticRetriever(
         clauses,
-        EMBEDDING_MODEL
+        EMBEDDING_MODEL,
     )
 
     hybrid = HybridRetriever(
         bm25,
-        semantic
+        semantic,
     )
 
-    retrieval_agent = RetrievalAgent(
-        hybrid
-    )
+    return {
 
-    checker = AnswerabilityChecker(
-        MIN_RETRIEVAL_SCORE
-    )
+        "retrieval": RetrievalAgent(
+            hybrid
+        ),
 
-    evidence_agent = EvidenceAgent(
-        checker
-    )
+        "evidence": EvidenceAgent(),
 
-    llm = LLMClient()
+        "contradiction": (
+            ContradictionAgent(
+                clauses
+            )
+        ),
 
-    citation_validator = CitationValidator()
+        "date": DateResolver(),
 
-    contradiction_agent = ContradictionAgent()
+        "answerability": Answerability(),
 
-    answer_agent = AnswerAgent(
-        llm,
-        citation_validator,
-        contradiction_agent
-    )
+        "answer": AnswerAgent(
+            LLMClient()
+        ),
+    }
 
-    return (
-        retrieval_agent,
-        evidence_agent,
-        answer_agent
-    )
-
-
-def process_question(
-    question,
-    retrieval_agent,
-    evidence_agent,
-    answer_agent
+def process_query(
+    query,
+    system,
+    memory=None,
 ):
 
-    results = retrieval_agent.retrieve(
-        question,
-        TOP_K
+    full_query = query.strip()
+
+    # ----------------------------------------------------
+    # Resolve dates
+    # ----------------------------------------------------
+
+    date_info = system["date"].resolve(
+        full_query
     )
 
-    if not results:
+    # ----------------------------------------------------
+    # Retrieve relevant policy clauses
+    # ----------------------------------------------------
 
-        print(
-            "\nStatus: NOT_FOUND"
-        )
+    clauses = system["retrieval"].run(
+        full_query
+    )
 
-        print(
-            "\nAnswer:"
-        )
+    # ----------------------------------------------------
+    # Extract evidence
+    # ----------------------------------------------------
 
-        print(
-            "The requested policy section or "
-            "information was not found in the "
-            "policy manual."
-        )
+    evidence = system["evidence"].run(
+        clauses,
+        date_info,
+    )
 
-        return
+    # ----------------------------------------------------
+    # Detect contradictions
+    # ----------------------------------------------------
 
-    can_answer, reason = (
-        evidence_agent.evaluate(
-            results
+    conflict = (
+        system["contradiction"].run(
+            full_query,
+            evidence,
+            date_info,
         )
     )
 
-    if not can_answer:
+    # ----------------------------------------------------
+    # Determine answerability
+    # ----------------------------------------------------
 
-        print(
-            "\nStatus: NEEDS_COUNTY_INSIGHT"
+    status = (
+        system["answerability"].check(
+            evidence,
+            date_info,
+            conflict,
+            full_query,
         )
-
-        print(
-            "\nAnswer:"
-        )
-
-        print(
-            "The supplied policy evidence does "
-            "not provide enough information to "
-            "answer this question authoritatively."
-        )
-
-        print(
-            "\nCounty Insight:"
-        )
-
-        print(
-            "The policy manual does not provide "
-            "enough information to make an "
-            "authoritative determination for "
-            "this situation."
-        )
-
-        print(
-            "Please contact the county directly "
-            "for an official determination."
-        )
-
-        return
-
-    result = answer_agent.answer(
-        question,
-        results
     )
 
-    print(
-        f"\nStatus: {result.status.upper()}"
+    # ----------------------------------------------------
+    # Generate final answer
+    # ----------------------------------------------------
+
+    result = system["answer"].run(
+        full_query,
+        status,
+        evidence,
+        date_info,
+        conflict,
     )
 
-    print(
-        f"\nAnswer:\n{result.answer}"
-    )
-
-    if result.status == "needs_county_insight":
-
-        print(
-            "\nCounty Insight:"
-        )
-
-        print(
-            "The policy manual does not provide "
-            "enough information to make an "
-            "authoritative determination for "
-            "this situation."
-        )
-
-        print(
-            "Please contact the county directly "
-            "for an official determination."
-        )
-
-    if result.citations:
-
-        print(
-            "\nCitations:"
-        )
-
-        for citation in result.citations:
-            print(
-                f"- §{citation}"
-            )
+    return result
 
 
-@click.command()
 def main():
-
-    (
-        retrieval_agent,
-        evidence_agent,
-        answer_agent
-    ) = build_system()
+    system = build_system()
 
     print(
-        "\nPolicy Assistant started!"
+        "Calder County Policy Assistant"
     )
 
     print(
-        "Ask a question about the policy manual."
-    )
-
-    print(
-        "Type 'quit' to exit.\n"
+        "Type 'quit' to exit."
     )
 
     while True:
-
-        question = input(
-            "You: "
+        query = input(
+            "\nYou: "
         ).strip()
 
-        if question.lower() == "quit":
-
-            print(
-                "\nGoodbye!"
-            )
-
+        if query.lower() == "quit":
             break
 
-        if not question:
-
-            print(
-                "Please enter a question.\n"
-            )
-
+        if not query:
             continue
 
-        try:
+        result = process_query(
+            query,
+            system,
+        )
 
-            process_question(
-                question,
-                retrieval_agent,
-                evidence_agent,
-                answer_agent
-            )
-
-            print()
-
-        except Exception as error:
-
-            print(
-                f"\nError: {error}\n"
-            )
+        print_result(result)
 
 
 if __name__ == "__main__":
