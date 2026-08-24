@@ -109,8 +109,8 @@ CLI output: Status / Answer / (County Insight) / Citations
 
 ```bash
 # 1. Clone
-git clone <this-repo-url>
-cd <repo-folder>
+git clone https://github.com/Dakshan-Kumar-A/BriteSpark-The-Grounded-Answer.git
+cd BriteSpark-The-Grounded-Answer
 
 # 2. Create and activate a virtual environment
 python3 -m venv venv
@@ -154,7 +154,7 @@ Type `quit` to exit.
 ## 6. Running the tests
 
 ```bash
-pytest
+python -m pytest tests/ -v
 ```
 
 This runs `tests/test_parser.py`, `tests/test_retrieval.py`, and `tests/test_decisions.py`, which check that the manual parses into clauses, that a known clause (`4.3.2`) exists, and that BM25, semantic, and hybrid retrieval all return results for a sample query.
@@ -162,7 +162,7 @@ This runs `tests/test_parser.py`, `tests/test_retrieval.py`, and `tests/test_dec
 ## 7. Running the evaluation suite
 
 ```bash
-python evaluation/run_evaluation.py
+python -m evaluation.run_evaluation
 ```
 
 This runs the 10 hand-written questions in `evaluation/test_cases.json` against the retrieval + refusal + contradiction logic (it does not call the LLM, so it runs without a Groq key) and prints a PASS/FAIL line per question plus a final score. The test set is intentionally not all-passing-by-design — it includes questions the system is expected to refuse and one it is expected to flag as a conflict, per the hackathon's own guidance not to submit only easy questions.
