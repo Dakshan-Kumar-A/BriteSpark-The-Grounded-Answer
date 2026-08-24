@@ -1,11 +1,8 @@
 import re
-
 from src.models.schemas import Status
 from src.config import MIN_RETRIEVAL_SCORE
 
-
 class Answerability:
-
     STOP_WORDS = {
         "what",
         "is",
@@ -35,7 +32,6 @@ class Answerability:
             r"[a-z0-9]+",
             text.lower(),
         )
-
         return {
             word
             for word in words
@@ -49,10 +45,8 @@ class Answerability:
         evidence,
     ):
         query_tokens = self._tokens(query)
-
         if not query_tokens:
             return True
-
         evidence_text = " ".join(
             (
                 item.clause.text
@@ -61,18 +55,13 @@ class Answerability:
             )
             for item in evidence
         )
-
         evidence_tokens = self._tokens(
             evidence_text
         )
-
         overlap = (
             query_tokens
             & evidence_tokens
         )
-
-        # At least one meaningful query concept
-        # should appear in the evidence.
         return bool(overlap)
 
     def check(
@@ -82,57 +71,30 @@ class Answerability:
         conflict,
         query=None,
     ):
-        # --------------------------------------------------
-        # Missing date
-        # --------------------------------------------------
-
         if date_info.get("needed"):
             return Status.DATE_REQUIRED
-
-        # --------------------------------------------------
-        # Contradiction
-        # --------------------------------------------------
-
         if conflict.get("conflict"):
             return Status.CONFLICT
-
-        # --------------------------------------------------
-        # No evidence
-        # --------------------------------------------------
-
         if not evidence:
             return Status.REFUSED
-
-        # --------------------------------------------------
-        # Score filtering
-        # --------------------------------------------------
-
         relevant = []
-
+        
         for item in evidence:
-
             score = getattr(
                 item,
                 "score",
                 0.0,
             )
-
             if score >= MIN_RETRIEVAL_SCORE:
                 relevant.append(item)
-
+                
         if not relevant:
             return Status.REFUSED
-
-        # --------------------------------------------------
-        # Lexical topic validation
-        # --------------------------------------------------
-
         if query is not None:
-
             if not self._has_lexical_support(
                 query,
                 relevant,
             ):
                 return Status.REFUSED
-
+            
         return Status.ANSWERED

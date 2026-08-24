@@ -6,7 +6,6 @@ def make_citation(clause):
         f"{clause.end_line}"
     )
 
-
 def validate_citations(citations):
     return all(
         citation

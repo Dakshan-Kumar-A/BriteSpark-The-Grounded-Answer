@@ -1,11 +1,8 @@
 import numpy as np
 
 from sentence_transformers import SentenceTransformer
-
 from src.config import EMBEDDING_MODEL
-
 from src.models.schemas import RetrievedClause
-
 
 class SemanticRetriever:
 
@@ -15,16 +12,13 @@ class SemanticRetriever:
         model_name=EMBEDDING_MODEL,
     ):
         self.clauses = clauses
-
         self.model = SentenceTransformer(
             model_name
         )
-
         texts = [
             clause.text
             for clause in clauses
         ]
-
         self.embeddings = self.model.encode(
             texts,
             normalize_embeddings=True
@@ -39,16 +33,13 @@ class SemanticRetriever:
             [query],
             normalize_embeddings=True
         )[0]
-
         scores = np.dot(
             self.embeddings,
             query_embedding
         )
-
         results = []
 
         for index, score in enumerate(scores):
-
             results.append(
                 RetrievedClause(
                     clause=self.clauses[index],
@@ -56,7 +47,6 @@ class SemanticRetriever:
                     source="semantic"
                 )
             )
-
         results.sort(
             key=lambda item: item.score,
             reverse=True

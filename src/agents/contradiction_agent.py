@@ -1,5 +1,4 @@
 class ContradictionAgent:
-
     def __init__(self, clauses):
         self.clauses = clauses
 
@@ -11,35 +10,21 @@ class ContradictionAgent:
     ):
         """
         Detect policy contradictions.
-
         Reporting rules:
             - Use the change date.
             - Before 1 March 2026, the original policy applies.
-            - The original policy contains conflicting reporting
-              provisions in §4.3.2 and §9.1.4.
-
+            - The original policy contains conflicting reporting provisions in §4.3.2 and §9.1.4.
         The contradiction check uses the COMPLETE CORPUS rather
         than only retrieved evidence. This prevents retrieval
         ranking from hiding one side of a known contradiction.
         """
-
-        # --------------------------------------------------
-        # If no date was supplied, the answerability layer
-        # will handle DATE_REQUIRED.
-        # --------------------------------------------------
 
         if date_info.get("needed"):
             return {
                 "conflict": False,
                 "clauses": [],
             }
-
-        # --------------------------------------------------
-        # Determine whether the question concerns reporting.
-        # --------------------------------------------------
-
         query_text = query.lower()
-
         reporting_keywords = [
             "reporting deadline",
             "reporting period",
@@ -63,36 +48,19 @@ class ContradictionAgent:
                 "conflict": False,
                 "clauses": [],
             }
-
-        # --------------------------------------------------
-        # Amended policy.
-        #
-        # The amendment resolves the old conflict.
-        # --------------------------------------------------
-
         if date_info.get("version") == "amended":
             return {
                 "conflict": False,
                 "clauses": [],
             }
 
-        # --------------------------------------------------
-        # Original policy.
-        #
-        # IMPORTANT:
-        # Search the COMPLETE corpus, not only retrieved
-        # evidence.
-        # --------------------------------------------------
-
         sections = {
             clause.section: clause
             for clause in self.clauses
         }
-
         first = sections.get("4.3.2")
         second = sections.get("9.1.4")
 
-        # Both original reporting provisions exist.
         if first and second:
             return {
                 "conflict": True,
@@ -101,7 +69,6 @@ class ContradictionAgent:
                     second,
                 ],
             }
-
         return {
             "conflict": False,
             "clauses": [],
