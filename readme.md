@@ -138,7 +138,7 @@ Type 'quit' to exit.
 You:
 ```
 
-Ask something like: `How many days does a recipient have to report a change of circumstances?` — this question is expected to trigger the **conflict** path (§4.3.2 vs §9.1.4).
+Ask something like: `How many days does a recipient have to report a change of circumstances?` — this question is expected to trigger the **date_required** path.
 
 Type `quit` to exit.
 
