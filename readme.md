@@ -59,7 +59,7 @@ CLI output: Status / Answer / (County Insight) / Citations
 .
 ├── data/
 │   └── policy-manual.md          # the corpus (source of truth)
-├── Amendment No. 2026-01.md      # Day-2 change; not yet wired into the pipeline
+├   └─ Amendment No. 2026-01.md   # Day-2 change
 ├── src/
 │   ├── config.py                 # paths, model name, TOP_K, MIN_RETRIEVAL_SCORE
 │   ├── main.py                   # CLI entry point (Click)
